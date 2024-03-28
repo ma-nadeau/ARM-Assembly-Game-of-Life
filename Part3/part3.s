@@ -18,6 +18,7 @@ CHARACTER_BUFFER_ADDR = 0xc9000000
 
 currentLineColour = 0x0             // Used to colour the lines
 currentBackGroundColour = -368140053
+currentRectangleColour = 1717986919
 
 
 MAXIMUM_X_INDEX_PIXEL_REGISTER = 319
@@ -257,9 +258,98 @@ GoL_draw_grid_ASM:
     BX LR
 
 
+// Calls VGA_draw_point_ASM and fills in the rectangle in (x1,y1) to (x2, y2)
+// A1 <- X1, A2 <- X2, A3 <- Y1, A4 <- Y2
+VGA_draw_rect_ASM:
+
+    PUSH {V1-V7, LR}
+
+    // INPUT Validation                     //TODO: might want to implement this differently
+    CMP A1, A2                              // Check for X1 > X2
+    BGT end_draw_rec
+
+    CMP A3, A4                              // Check if  Y1 > Y2
+    BGT end_draw_rec
+
+
+    MOV V1, A2                          // Outer Loop Max
+    MOV V2, A4                          // Inner Loop Max
+    MOV V3, A1                          // counter for outer loop (X coor or i)
+    MOV V4, A3                          // counter for outer loop (Y coor or j)
+    MOV V6, A3
+    LDR A3, =currentRectangleColour     // Colour to set the background to    
+
+    outer_loop_pixel_draw_rec: 
+        inner_loop_pixel_draw_rec:
+
+            MOV A1, V3                    // X Index to be cleared
+            MOV A2, V4                    // Y Index to be cleared
+            BL VGA_draw_point_ASM         // Calling subroutine to clear
+
+            ADD V4, V4, #1                // j++
+            CMP V4, V2                    // Compare j with 239
+            BLE inner_loop_pixel_draw_rec // if j <= 239, loop back to inner loop
+
+		MOV V4, V6                        // reset counter for outer loop (Y coor or j)
+        ADD V3, V3, #1                    // i++
+        CMP V3, V1                        // Compare i with 319 
+        BLE outer_loop_pixel_draw_rec     // if i <= 239, loop back to outer loop
+    end_draw_rec:
+        POP {V1-V7, LR}
+        BX LR
+    
+// fills the area of grid location (x, y) with color c.
+
+// A1 <- X,  A2 <- Y
+GoL_fill_gridxy_ASM:
+    PUSH {V1-V7,LR}
+
+    // INPUT VALIDATION
+    MOV V1, #0                          // To compare 
+
+    CMP A1, V1                          // Check if X >= 0
+    BLT out_of_range_fill_gridxy        // if X < 0, (i.e not in range) stop
+    CMP A2, V1                          // Check if y >=0 
+    BLT out_of_range_fill_gridxy        // if Y < 0, (i.e not in range) stop
+
+    LDR V1, =16                         // V1 <- 16, overides the 0 in V1
+
+    CMP A1, V1                          // Check if X >= 12
+    BGE out_of_range_fill_gridxy        // if X >= 16, (i.e not in range) stop
+
+    MOV V1, #12                         // V1 <- 12, overides the 0 in V1
+
+    CMP A2, V1                          // Check if Y > 12
+    BGE out_of_range_fill_gridxy        // if Y >= 12, (i.e not in range) stop
+
+    MOV V2, #20
+    MUL A1, A1, V2                     // A1 <- Updated/Pixel-wise X index of rect 
+    ADD A1, A1, #1
+    MUL A3, A2, V2                     // A3 <- Updated/Pixel-wise X index of rect 
+    ADD A3, A3, #1                     
+    
+    MOV V2, #18
+    ADD A2, A1, V2                      // Index of X + 20 
+    ADD A4, A3, V2                      // Index of Y + 20
+
+    BL VGA_draw_rect_ASM
+    
+    out_of_range_fill_gridxy:
+        POP {V1-V7, LR}
+        BX LR
+
+
+
+
+
+
 _start:
     setup:
         BL GoL_draw_grid_ASM
     
     game:
+        MOV A1, #3
+        MOV A2, #6        
+
+        BL GoL_fill_gridxy_ASM
     	B game
