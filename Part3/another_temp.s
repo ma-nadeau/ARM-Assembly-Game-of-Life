@@ -265,10 +265,10 @@ VGA_draw_line_ASM:
 
         // TODO: Find out why i need to do in order to write the last line 
         MOV A1, #0 
-        LDR A2, =MAXIMUM_X_INDEX_PIXEL_REGISTER
-        MOV A3, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
-		MOV A4, A3                  // A2 <- A1
-        BL VGA_draw_line_ASM
+        //LDR A2, =MAXIMUM_X_INDEX_PIXEL_REGISTER
+        //MOV A3, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
+		//MOV A4, A3                  // A2 <- A1
+        //BL VGA_draw_line_ASM
         POP {V1-V4, LR}
         BX LR
     
@@ -289,9 +289,9 @@ VGA_draw_line_ASM:
             BLE loop_Vertical_Grid
 
         // TODO: Find out why i need to do in order to write the last line 
-        MOV A1, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
-		MOV A2, A1                  // A2 <- A1
-        BL VGA_draw_line_ASM
+        //MOV A1, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
+		//MOV A2, A1                  // A2 <- A1
+        //BL VGA_draw_line_ASM
         POP {V1, LR}
         BX LR
 
