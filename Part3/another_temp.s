@@ -1,5 +1,6 @@
 
 .global _start
+.equ PS2_Data_Address, 0xff200100
 
 // contains the color value of every pixel on the screen 
 // 16-bit integers => 15...11 -> Red || 10...5 -> Green || 4...0 -> Blue
@@ -18,7 +19,9 @@ CHARACTER_BUFFER_ADDR = 0xc9000000
 
 currentLineColour = 0x0             // Used to colour the lines
 currentBackGroundColour = -368140053
-currentRectangleColour = 1717986919
+currentRectangleColour = 1717986919 //green
+white_cursor = -1
+grey_cursor = -2139062144
 
 
 MAXIMUM_X_INDEX_PIXEL_REGISTER = 319
@@ -39,6 +42,37 @@ GoLBoard:
 	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 9
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
+
+COLOR_SELECTOR: .word 1
+KEYBOARD_VALUE: .word 0
+CURRENT_CURSOR_X: .word 0
+CURRENT_CURSOR_Y: .word 0
+
+//
+// PS2 DRIVER
+//
+@ TODO: insert PS/2 driver here.
+//assuming A1 is the address where we ant to store the keyboard value (input)
+//assuming A2 is the return (1 or 0)
+read_PS2_data_ASM:
+	PUSH {V1-V5, LR}
+	LDR V1, =PS2_Data_Address //V1 has the value of the PS2 Data Address
+	LDR V2, [V1] //V2 has the content from PS2_Data register
+	MOV V3, V2 //copy The content so we can shift V3 by 15 to get the value of RVALID
+	LSR V3, V3, #15 //logical shift right 15 to get RVALID
+	AND V3, V3, #0x1 //And operation to get RVALID bit value (1 or 0)
+	CMP V3, #1 //compare and see if its 1
+	BNE dont_read //if its 0, we dont read and set return to 0
+	AND V2, V2, #0xFF //if its 1, we get only the low eight bits
+	STRB V2, [A1] //store this byte in the memory location put as input
+	B exit_read_ps2_data
+dont_read:
+	MOV A2, #0 //if we dont read, return 0
+exit_read_ps2_data:
+	POP {V1-V5, LR}
+	BX LR
+	
+
 
 // void VGA_draw_point_ASM(int x, int y, short c);
 // draws a point on the screen at the specified (x, y) coordinates in the indicated color c
@@ -292,7 +326,17 @@ VGA_draw_rect_ASM:
     MOV V3, A1                          // counter for outer loop (X coor or i)
     MOV V4, A3                          // counter for outer loop (Y coor or j)
     MOV V6, A3
-    LDR A3, =currentRectangleColour     // Colour to set the background to    
+
+    LDR V7, COLOR_SELECTOR
+    CMP V7, #0
+    BLEQ set_green
+    CMP V7, #1
+    BLEQ set_white
+    CMP V7, #2
+    BLEQ set_grey
+
+
+    //LDR A3, =currentRectangleColour     // Colour to set the background to    
 
     outer_loop_pixel_draw_rec: 
         inner_loop_pixel_draw_rec:
@@ -314,6 +358,15 @@ VGA_draw_rect_ASM:
         BX LR
     
 // fills the area of grid location (x, y) with color c.
+set_green:
+    LDR A3, =currentRectangleColour // Colour to set the background to    
+    BX LR
+set_white:
+    LDR A3, =white_cursor // Colour to set the background to    
+    BX LR
+set_grey:
+    LDR A3, =grey_cursor // Colour to set the background to    
+    BX LR
 
 // A1 <- X,  A2 <- Y
 GoL_fill_gridxy_ASM:
@@ -355,7 +408,7 @@ GoL_fill_gridxy_ASM:
 
 
 GoL_draw_board_ASM:
-	PUSH {V1-V7, LR}
+	PUSH {V1-V8, LR}
 	LDR V1, =GoLBoard //V1 has the base address of the base display values
 	MOV V5, V1 //V5 serves to keep track of address vertically 
 	MOV V2, #0 //V2 is the x value (increases by 1 each time)
@@ -369,8 +422,11 @@ handle_initial_drawing:
     PUSH {LR}
 	LDR V4, [V1] //load golboard[x][y] into V4
 	CMP V4, #1 //check if its equal to 1
-	LDR A1, [V2]
-	LDR A2, [V3] //load x and y values into A1 and A2 (inputs for the function if we call it)
+	MOV A1, V2
+	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function if we call it)
+    LDR V8, =COLOR_SELECTOR
+    MOV V7, #0 //set color to 0 which is green
+    STR V7, [V8]
 	BLEQ GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
 	POP {LR}
     
@@ -386,7 +442,7 @@ handle_initial_drawing:
 reset_x:
 	MOV V2, #0 //reset x to 0
 	ADD V3, #1 //increase y by 1 because we are on a new row
-	ADD V5, V5, #16 //set V5 to the beginning of the next row
+	ADD V5, V5, #64 //set V5 to the beginning of the next row
 	MOV V1, V5 //set V1 to base address of the current row (so we can go through the x addresses)
 	CMP V3, #12 //if y is 12 we are done
 	BGE final_exit
@@ -394,20 +450,87 @@ reset_x:
     B handle_initial_drawing
 	
 final_exit:
-	POP {V1-V7, LR}
+	POP {V1-V8, LR}
 	BX LR
 	
+set_initial_cursor:
+    PUSH {V1-V8, LR}
+    MOV A1, #0
+	MOV A2, #0 //set x,y to 0,0
+    LDR V8, =COLOR_SELECTOR
+    MOV V7, #1 //set color to 1 which is white
+    STR V7, [V8]
+	BL GoL_fill_gridxy_ASM
+    POP {V1-V8, LR}
+    BX LR
 	
-	
-	
+curser_polling:
+    PUSH {V1-V8, LR}
+    LDR A1, =KEYBOARD_VALUE //A1 is the keyboard value address 
+    BL read_PS2_data_ASM //sets a2
+    CMP A2, #1 //if A2 is 1, we need to analyse the new input
+    BEQ analyse_curser
+    B end_curser_polling
+
+analyse_curser:
+
+    LDR V2, CURRENT_CURSOR_X
+    LDR V3, CURRENT_CURSOR_Y //current y and x location
+
+    LDR V1, KEYBOARD_VALUE //v1 has the make value
+    CMP V1, #0x1C //a
+    BEQ handle_A
+    CMP V1, #0x23 //d
+    BEQ handle_D
+    CMP V1, #0x1B
+    BEQ handle_S
+    CMP V1, #0x1D  //W
+    BEQ handle_W
+    B end_curser_polling
+
+handle_A:
+    CMP V2, #0
+    BEQ end_curser_polling //if X is 0, dont do anything (cant go outside border)
+    SUB V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_X
+    STR V2, [V3]
+    B end_curser_polling
+handle_D:
+    CMP V2, #15
+    BEQ end_curser_polling //if X is 15, dont do anything (cant go outside border)
+    ADD V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_X
+    STR V2, [V3]
+    B end_curser_polling
+handle_S:
+    CMP V3, #11
+    BEQ end_curser_polling //if Y is 11, dont do anything (cant go outside border)
+    ADD V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_Y
+    STR V2, [V3]
+    B end_curser_polling
+
+handle_W:
+    CMP V3, #0
+    BEQ end_curser_polling //if Y is 0, dont do anything (cant go outside border)
+    SUB V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_Y
+    STR V2, [V3]
+    B end_curser_polling
+
+end_curser_polling:
+    POP {V1-V8, LR}
+    BX LR
 	
 _start:
     setup:
         BL GoL_draw_grid_ASM
+        BL set_initial_cursor
     
     game:
         MOV A1, #15
         MOV A2, #6        
 
         BL GoL_draw_board_ASM
+        BL curser_polling
     	B game
