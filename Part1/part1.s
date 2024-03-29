@@ -146,7 +146,7 @@ VGA_clear_charbuff_ASM:
             MOV A1, V3              // X Index to be cleared
             MOV A2, V4              // Y Index to be cleared
             MOV A3, #0              // Colour with value 0
-            BL VGA_draw_point_ASM   // Calling subroutine to clear
+            BL VGA_write_char_ASM   // Calling subroutine to clear
 
             ADD V4, V4, #1          // j++
             CMP V4, V2              // Compare j with 239
