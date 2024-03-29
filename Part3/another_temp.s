@@ -1,5 +1,10 @@
+// Authors: Marc-Antoine Nadeau - 261114549
+//          Rehean Thillainathalingam - 261116121
+
+
 
 .global _start
+
 .equ PS2_Data_Address, 0xff200100
 
 // contains the color value of every pixel on the screen 
@@ -48,6 +53,9 @@ KEYBOARD_VALUE: .word 0
 CURRENT_CURSOR_X: .word 0
 CURRENT_CURSOR_Y: .word 0
 
+COLOUR_BLOCK_UNDER_CURSOR: .word -1 
+
+CURRENT_CURSOR_COLOUR: .word 2
 //
 // PS2 DRIVER
 //
@@ -329,13 +337,13 @@ VGA_draw_rect_ASM:
     MOV V6, A3
 
     LDR V7, COLOR_SELECTOR
-    CMP V7, #0
-    BLEQ set_green
     CMP V7, #1
-    BLEQ set_white
+    BLEQ set_green
     CMP V7, #2
-    BLEQ set_grey
+    BLEQ set_white
     CMP V7, #3
+    BLEQ set_grey
+    CMP V7, #0
     BLEQ set_background
 
 
@@ -430,8 +438,8 @@ handle_initial_drawing:
 	CMP V4, #1 //check if its equal to 1
 	MOV A1, V2
 	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function if we call it)
-    LDR V8, =COLOR_SELECTOR
-    MOV V7, #0 //set color to 0 which is green
+    LDR V8, =COLOR_SELECTOR  
+    MOV V7, #1 //set color to 1 which is green
     STR V7, [V8]
 	BLEQ GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
 	POP {LR}
@@ -459,12 +467,14 @@ final_exit:
 	POP {V1-V8, LR}
 	BX LR
 	
-set_initial_cursor:
+set_cursor:
     PUSH {V1-V8, LR}
     LDR A1, CURRENT_CURSOR_X
     LDR A2, CURRENT_CURSOR_Y
     LDR V8, =COLOR_SELECTOR
-    MOV V7, #1 //set color to 1 which is white
+
+    // MOV V7, #2 //set color to 2 which is white
+    LDR V7, CURRENT_CURSOR_COLOUR  //TODO: fix this to handle grey as well
     STR V7, [V8]
 	BL GoL_fill_gridxy_ASM
     POP {V1-V8, LR}
@@ -491,7 +501,10 @@ analyse_curser:
     BEQ handle_S
     CMP V1, #0x1D  //W
     BEQ handle_W
+    CMP V1, #0x29 //space
+    BLEQ handle_space
     B end_curser_polling
+
 
 handle_A:
     CMP V2, #0
@@ -538,27 +551,80 @@ handle_prev_cursor_removal:
     MOV A1, V2
 	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function)
     LDR V8, =COLOR_SELECTOR
-    MOV V7, #3 //set color to 0 which is pink backround
+    BL get_colour
+    LDR V7, COLOUR_BLOCK_UNDER_CURSOR                 // Write back the previous colour
+    //MOV V7, #3 //set color to 0 which is pink backround
     STR V7, [V8]
     
 	BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
     POP {V1-V8, LR}
     BX LR
 
+
+handle_space:
+    PUSH {V1-V8, LR}
+
+    LDR V1, CURRENT_CURSOR_X
+    LDR V2, CURRENT_CURSOR_Y
+
+    LDR V3, COLOUR_BLOCK_UNDER_CURSOR           // 0 -> red 1-> green
+
+    LDR V4, =GoLBoard                           // Get the address of the board 
+      
+    LSL V5, V1, #2                      // X << 2
+    LDR V6, =64                         // Load 16 for offset
+    MUL V7, V2, V6                      // New Y coord = Y * 64 
+    
+    ADD V6, V5, V4 
+    ADD V6, V6, V7 //V6 is the memory address of the current cursors state (1 or 0)
+    
+    LDR V1, [V6]                        // Get 0 or 1 from board
+    CMP V1, #1
+    MOVEQ V2, #0
+    STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
+    
+    CMP V1, #0
+    MOVEQ V2, #1
+    STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
+    
+    
+    POP {V1-V8, LR}
+    BX LR
+    
+
+// A1 <- X offset   A2 <- Y offset
+get_colour:
+    PUSH {V1-V7, LR}
+    LDR V1, =GoLBoard                   // Get the address of the board 
+    LSL V3, A1, #2                      // X << 2
+    LDR V4, =64                         // Load 16 for offset
+    MUL V2, A2, V4                      // New Y coord = Y * 64 
+    
+    ADD V5, V3, V1 
+    ADD V5, V5, V2
+    LDR V2, [V5]                        // Get 0 or 1 from board              
+    
+    LDR V6, =COLOUR_BLOCK_UNDER_CURSOR
+    STR V2, [V6]
+    POP {V1-V7, LR}
+    BX LR
+
+
+
+
+
 end_curser_polling:
     POP {V1-V8, LR}
     BX LR
-	
 _start:
     setup:
         BL GoL_draw_grid_ASM
         BL GoL_draw_board_ASM
 
-        //BL set_initial_cursor
     
     game:
         //MOV A1, #15
         //MOV A2, #6    
-        BL set_initial_cursor
+        BL set_cursor
         BL curser_polling
     	B game

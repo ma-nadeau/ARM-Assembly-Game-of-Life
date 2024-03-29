@@ -1,5 +1,7 @@
+// Authors: Marc-Antoine Nadeau - 261114549
+//          Rehean Thillainathalingam - TODO: STUDENT ID
 
-
+.global _start
 
 // contains the color value of every pixel on the screen 
 // // 16-bit integers => 15...11 -> Red || 10...5 -> Green || 4...0 -> Blue
@@ -14,7 +16,7 @@ PIXEL_BUFFER_ADDR = 0xc8000000
 // An individual character can be accessed at 0xc9000000 | (y << 7) | x.
 CHARACTER_BUFFER_ADDR = 0xc9000000
 
-.global _start
+
 _start:
         bl      draw_test_screen
 end:

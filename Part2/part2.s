@@ -1,3 +1,7 @@
+// Authors: Marc-Antoine Nadeau - 261114549
+//          Rehean Thillainathalingam - TODO: STUDENT ID
+
+
 // contains the color value of every pixel on the screen 
 // // 16-bit integers => 15...11 -> Red || 10...5 -> Green || 4...0 -> Blue
 // Individual pixel colors can be accessed at 0xc8000000 | (y << 10) | (x << 1)

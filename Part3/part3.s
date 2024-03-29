@@ -1,3 +1,6 @@
+// Authors: Marc-Antoine Nadeau - 261114549
+//          Rehean Thillainathalingam - TODO: STUDENT ID
+
 
 .global _start
 .equ PS2_Data_Address, 0xff200100
@@ -461,7 +464,7 @@ set_initial_cursor:
     POP {V1-V8, LR}
     BX LR
 	
-	
+
 	
 _start:
     setup:
