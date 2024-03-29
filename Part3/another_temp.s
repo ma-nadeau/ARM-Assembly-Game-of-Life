@@ -65,6 +65,7 @@ read_PS2_data_ASM:
 	BNE dont_read //if its 0, we dont read and set return to 0
 	AND V2, V2, #0xFF //if its 1, we get only the low eight bits
 	STRB V2, [A1] //store this byte in the memory location put as input
+    MOV A2, #1
 	B exit_read_ps2_data
 dont_read:
 	MOV A2, #0 //if we dont read, return 0
@@ -334,6 +335,8 @@ VGA_draw_rect_ASM:
     BLEQ set_white
     CMP V7, #2
     BLEQ set_grey
+    CMP V7, #3
+    BLEQ set_background
 
 
     //LDR A3, =currentRectangleColour     // Colour to set the background to    
@@ -366,6 +369,9 @@ set_white:
     BX LR
 set_grey:
     LDR A3, =grey_cursor // Colour to set the background to    
+    BX LR
+set_background:
+    LDR A3, =currentBackGroundColour // Colour to set the background to    
     BX LR
 
 // A1 <- X,  A2 <- Y
@@ -455,8 +461,8 @@ final_exit:
 	
 set_initial_cursor:
     PUSH {V1-V8, LR}
-    MOV A1, #0
-	MOV A2, #0 //set x,y to 0,0
+    LDR A1, CURRENT_CURSOR_X
+    LDR A2, CURRENT_CURSOR_Y
     LDR V8, =COLOR_SELECTOR
     MOV V7, #1 //set color to 1 which is white
     STR V7, [V8]
@@ -473,7 +479,6 @@ curser_polling:
     B end_curser_polling
 
 analyse_curser:
-
     LDR V2, CURRENT_CURSOR_X
     LDR V3, CURRENT_CURSOR_Y //current y and x location
 
@@ -491,6 +496,9 @@ analyse_curser:
 handle_A:
     CMP V2, #0
     BEQ end_curser_polling //if X is 0, dont do anything (cant go outside border)
+
+    BL handle_prev_cursor_removal
+
     SUB V2, V2, #1
     LDR V3, =CURRENT_CURSOR_X
     STR V2, [V3]
@@ -498,6 +506,9 @@ handle_A:
 handle_D:
     CMP V2, #15
     BEQ end_curser_polling //if X is 15, dont do anything (cant go outside border)
+
+    BL handle_prev_cursor_removal
+
     ADD V2, V2, #1
     LDR V3, =CURRENT_CURSOR_X
     STR V2, [V3]
@@ -505,18 +516,34 @@ handle_D:
 handle_S:
     CMP V3, #11
     BEQ end_curser_polling //if Y is 11, dont do anything (cant go outside border)
-    ADD V2, V2, #1
-    LDR V3, =CURRENT_CURSOR_Y
-    STR V2, [V3]
+    BL handle_prev_cursor_removal
+
+    ADD V3, V3, #1
+    LDR V2, =CURRENT_CURSOR_Y
+    STR V3, [V2]
     B end_curser_polling
 
 handle_W:
     CMP V3, #0
     BEQ end_curser_polling //if Y is 0, dont do anything (cant go outside border)
-    SUB V2, V2, #1
-    LDR V3, =CURRENT_CURSOR_Y
-    STR V2, [V3]
+    BL handle_prev_cursor_removal
+
+    SUB V3, V3, #1
+    LDR V2, =CURRENT_CURSOR_Y
+    STR V3, [V2]
     B end_curser_polling
+
+handle_prev_cursor_removal:
+    PUSH {V1-V8, LR}
+    MOV A1, V2
+	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function)
+    LDR V8, =COLOR_SELECTOR
+    MOV V7, #3 //set color to 0 which is pink backround
+    STR V7, [V8]
+    
+	BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
+    POP {V1-V8, LR}
+    BX LR
 
 end_curser_polling:
     POP {V1-V8, LR}
@@ -525,12 +552,13 @@ end_curser_polling:
 _start:
     setup:
         BL GoL_draw_grid_ASM
-        BL set_initial_cursor
+        BL GoL_draw_board_ASM
+
+        //BL set_initial_cursor
     
     game:
-        MOV A1, #15
-        MOV A2, #6        
-
-        BL GoL_draw_board_ASM
+        //MOV A1, #15
+        //MOV A2, #6    
+        BL set_initial_cursor
         BL curser_polling
     	B game
