@@ -1,8 +1,10 @@
 // Authors: Marc-Antoine Nadeau - 261114549
-//          Rehean Thillainathalingam - TODO: STUDENT ID
+//          Rehean Thillainathalingam - 261116121
+
 
 
 .global _start
+
 .equ PS2_Data_Address, 0xff200100
 
 // contains the color value of every pixel on the screen 
@@ -45,10 +47,29 @@ GoLBoard:
 	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 9
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
+GoLBoard_Copy:
+	//  x 0 1 2 3 4 5 6 7 8 9 a b c d e f    y
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 0
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 1
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 2
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 3
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 4
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 5
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 6
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 7
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 8
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 9
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
 
 COLOR_SELECTOR: .word 1
+KEYBOARD_VALUE: .word 0
+CURRENT_CURSOR_X: .word 0
+CURRENT_CURSOR_Y: .word 0
 
+COLOUR_BLOCK_UNDER_CURSOR: .word -1 
 
+CURRENT_CURSOR_COLOUR: .word 2
 //
 // PS2 DRIVER
 //
@@ -66,6 +87,7 @@ read_PS2_data_ASM:
 	BNE dont_read //if its 0, we dont read and set return to 0
 	AND V2, V2, #0xFF //if its 1, we get only the low eight bits
 	STRB V2, [A1] //store this byte in the memory location put as input
+    MOV A2, #1
 	B exit_read_ps2_data
 dont_read:
 	MOV A2, #0 //if we dont read, return 0
@@ -73,6 +95,7 @@ exit_read_ps2_data:
 	POP {V1-V5, LR}
 	BX LR
 	
+
 
 // void VGA_draw_point_ASM(int x, int y, short c);
 // draws a point on the screen at the specified (x, y) coordinates in the indicated color c
@@ -328,12 +351,14 @@ VGA_draw_rect_ASM:
     MOV V6, A3
 
     LDR V7, COLOR_SELECTOR
-    CMP V7, #0
-    BLEQ set_green
     CMP V7, #1
-    BLEQ set_white
+    BLEQ set_green
     CMP V7, #2
+    BLEQ set_white
+    CMP V7, #3
     BLEQ set_grey
+    CMP V7, #0
+    BLEQ set_background
 
 
     //LDR A3, =currentRectangleColour     // Colour to set the background to    
@@ -366,6 +391,9 @@ set_white:
     BX LR
 set_grey:
     LDR A3, =grey_cursor // Colour to set the background to    
+    BX LR
+set_background:
+    LDR A3, =currentBackGroundColour // Colour to set the background to    
     BX LR
 
 // A1 <- X,  A2 <- Y
@@ -409,7 +437,8 @@ GoL_fill_gridxy_ASM:
 
 GoL_draw_board_ASM:
 	PUSH {V1-V8, LR}
-	LDR V1, =GoLBoard //V1 has the base address of the base display values
+    LDR V1, =GoLBoard
+	//LDR V1, =GoLBoard //V1 has the base address of the base display values
 	MOV V5, V1 //V5 serves to keep track of address vertically 
 	MOV V2, #0 //V2 is the x value (increases by 1 each time)
 	MOV V3, #0 //V3 is the y value (invreases by 1 when x goes past 15)
@@ -420,22 +449,40 @@ handle_initial_drawing:
 	
     //checking if valid 
     PUSH {LR}
+    MOV A1, V2
+	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function if we call it)
+    LDR V8, =COLOR_SELECTOR  
 	LDR V4, [V1] //load golboard[x][y] into V4
 	CMP V4, #1 //check if its equal to 1
-	MOV A1, V2
-	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function if we call it)
-    LDR V8, =COLOR_SELECTOR
-    MOV V7, #0 //set color to 0 which is green
+    MOVEQ V7, #1 //set color to 1 which is green
+    CMP V4, #0
+    MOVEQ V7, #0
     STR V7, [V8]
-	BLEQ GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
-	POP {LR}
-    
-
-	ADD V2, V2, #1 //x+1
-	ADD V1, V1, #4 //increment address to go to the next x value
-	CMP V2, #16
-	BGE reset_x //if x is 16 then we need to reset it to 0 (reached the last column), and increase y
 	
+  
+    LDR V8, CURRENT_CURSOR_X
+    LDR V4, CURRENT_CURSOR_Y
+
+    CMP V2, V8                  // check if X = X_cursor
+    BNE skip                    // skipp if not equal
+
+    CMP V3, V4                  // chekc if Y = Y_cursor 
+    BNE skip                    // if not equal skip
+    
+    B dont_call_fill    
+
+    skip:
+        BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
+	    
+        
+    dont_call_fill:
+        POP {LR}
+	    ADD V2, V2, #1 //x+1
+	    ADD V1, V1, #4 //increment address to go to the next x value
+	    CMP V2, #16
+	    BGE reset_x //if x is 16 then we need to reset it to 0 (reached the last column), and increase y
+	
+
 	B handle_initial_drawing
 	
 	
@@ -453,27 +500,440 @@ final_exit:
 	POP {V1-V8, LR}
 	BX LR
 	
-set_initial_cursor:
+set_cursor:
     PUSH {V1-V8, LR}
-    MOV A1, #0
-	MOV A2, #0 //set x,y to 0,0
+    LDR A1, CURRENT_CURSOR_X
+    LDR A2, CURRENT_CURSOR_Y
     LDR V8, =COLOR_SELECTOR
-    MOV V7, #1 //set color to 1 which is white
+
+    // MOV V7, #2 //set color to 2 which is white
+    LDR V7, CURRENT_CURSOR_COLOUR  //TODO: fix this to handle grey as well
     STR V7, [V8]
 	BL GoL_fill_gridxy_ASM
     POP {V1-V8, LR}
     BX LR
 	
+curser_polling:
+    PUSH {V1-V8, LR}
+    LDR A1, =KEYBOARD_VALUE //A1 is the keyboard value address 
+    BL read_PS2_data_ASM //sets a2
+    CMP A2, #1 //if A2 is 1, we need to analyse the new input
+    BEQ analyse_curser
+    B end_curser_polling
 
-	
+analyse_curser:
+    LDR V2, CURRENT_CURSOR_X
+    LDR V3, CURRENT_CURSOR_Y //current y and x location
+
+    LDR V1, KEYBOARD_VALUE //v1 has the make value
+    CMP V1, #0x1C //a
+    BEQ handle_A
+    CMP V1, #0x23 //d
+    BEQ handle_D
+    CMP V1, #0x1B
+    BEQ handle_S
+    CMP V1, #0x1D  //W
+    BEQ handle_W
+    CMP V1, #0x29 //space
+    BLEQ handle_space
+    CMP V1, #0x31 //n
+    BLEQ handle_n
+    B end_curser_polling
+
+
+handle_A:
+    CMP V2, #0
+    BEQ end_curser_polling //if X is 0, dont do anything (cant go outside border)
+
+    BL handle_prev_cursor_removal
+
+    SUB V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_X
+    STR V2, [V3]
+    B end_curser_polling
+handle_D:
+    CMP V2, #15
+    BEQ end_curser_polling //if X is 15, dont do anything (cant go outside border)
+
+    BL handle_prev_cursor_removal
+
+    ADD V2, V2, #1
+    LDR V3, =CURRENT_CURSOR_X
+    STR V2, [V3]
+    B end_curser_polling
+handle_S:
+    CMP V3, #11
+    BEQ end_curser_polling //if Y is 11, dont do anything (cant go outside border)
+    BL handle_prev_cursor_removal
+
+    ADD V3, V3, #1
+    LDR V2, =CURRENT_CURSOR_Y
+    STR V3, [V2]
+    B end_curser_polling
+
+handle_W:
+    CMP V3, #0
+    BEQ end_curser_polling //if Y is 0, dont do anything (cant go outside border)
+    BL handle_prev_cursor_removal
+
+    SUB V3, V3, #1
+    LDR V2, =CURRENT_CURSOR_Y
+    STR V3, [V2]
+    B end_curser_polling
+
+handle_prev_cursor_removal:
+    PUSH {V1-V8, LR}
+    MOV A1, V2
+	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function)
+    LDR V8, =COLOR_SELECTOR
+    BL get_colour
+    LDR V7, COLOUR_BLOCK_UNDER_CURSOR                 // Write back the previous colour
+    //MOV V7, #3 //set color to 0 which is pink backround
+    STR V7, [V8]
+    
+	BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
+    POP {V1-V8, LR}
+    BX LR
+
+
+handle_space:
+    PUSH {V1-V8, LR}
+
+    LDR V1, CURRENT_CURSOR_X
+    LDR V2, CURRENT_CURSOR_Y
+
+    LDR V3, COLOUR_BLOCK_UNDER_CURSOR           // 0 -> red 1-> green
+
+    LDR V4, =GoLBoard                           // Get the address of the board 
+      
+    LSL V5, V1, #2                      // X << 2
+    LDR V6, =64                         // Load 16 for offset
+    MUL V7, V2, V6                      // New Y coord = Y * 64 
+    
+    ADD V6, V5, V4 
+    ADD V6, V6, V7 //V6 is the memory address of the current cursors state (1 or 0)
+    
+    LDR V1, [V6]                        // Get 0 or 1 from board
+    CMP V1, #1
+    MOVEQ V2, #0
+    STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
+    
+    CMP V1, #0
+    MOVEQ V2, #1
+    STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
+    
+    
+    POP {V1-V8, LR}
+    BX LR
+    
+ handle_n: //TODO update board
+    PUSH {LR}
+    BL update_board_after_n_pressed
+    POP {LR}
+    BX LR
+
+// A1 <- X offset   A2 <- Y offset
+get_colour:
+    PUSH {V1-V7, LR}
+    LDR V1, =GoLBoard                   // Get the address of the board 
+    LSL V3, A1, #2                      // X << 2
+    LDR V4, =64                         // Load 16 for offset
+    MUL V2, A2, V4                      // New Y coord = Y * 64 
+    
+    ADD V5, V3, V1 
+    ADD V5, V5, V2
+    LDR V2, [V5]                        // Get 0 or 1 from board              
+    
+    LDR V6, =COLOUR_BLOCK_UNDER_CURSOR
+    STR V2, [V6]
+    POP {V1-V7, LR}
+    BX LR
+
+// DONT FIXME:
+end_curser_polling:
+    POP {V1-V8, LR}
+    BX LR
+
+copies_all_elements_of_board_in_board_copy:
+    PUSH {V1-V8, LR}
+    LDR V1, =GoLBoard                   // Get the address of the board 
+    LDR V2, =GoLBoard_Copy              // Get the address of the board 
+    MOV V3, #0                          // i -> X coord
+    MOV V4, #0                          // j -> Y coord
+    MOV V5, #0                          // X offset
+    MOV V6, #0                          // Y offset
+    outer_loop_copies_board:
+        inner_loop_copies_board:
+            LSL V5, V3, #2                      // X << 2
+            LDR V7, =64                         // Load 16 for offset
+            MUL V8, V4, V7                      // New Y coord = Y * 64 
+            ADD V8, V8, V5 //add x and y offsets to get final address
+            LDR V7, [V1, V8]
+            STR V7, [V2, V8]
+            ADD V4, V4, #1                      // j ++
+            MOV V5, #0
+            MOV V6, #0
+        
+        CMP V4, #11                             // Loop as long as x <= 15
+        BLE inner_loop_copies_board
+    MOV V4, #0                                  // j reset to 0
+    ADD V3, V3, #1                              // i++
+    CMP V3, #15                                 // loop as long as x <= 15
+    BLE outer_loop_copies_board
+
+
+    POP {V1-V8, LR}
+    BX LR
+
+copies_all_elements_of_board_in_board_copy2: //this one copies from the copy to the orginal
+    PUSH {V1-V8, LR}
+    LDR V1, =GoLBoard                   // Get the address of the board 
+    LDR V2, =GoLBoard_Copy              // Get the address of the board 
+    MOV V3, #0                          // i -> X coord
+    MOV V4, #0                          // j -> Y coord
+    MOV V5, #0                          // X offset
+    MOV V6, #0                          // Y offset
+    outer_loop_copies_board2:
+        inner_loop_copies_board2:
+            LSL V5, V3, #2                      // X << 2
+            LDR V7, =64                         // Load 16 for offset
+            MUL V8, V4, V7                      // New Y coord = Y * 64 
+            ADD V8, V8, V5 //add x and y offsets to get final address
+            LDR V7, [V2, V8]
+            STR V7, [V1, V8]
+            ADD V4, V4, #1                      // j ++
+            MOV V5, #0
+            MOV V6, #0
+        
+        CMP V4, #11                             // Loop as long as x <= 15
+        BLE inner_loop_copies_board2
+    MOV V4, #0                                  // j reset to 0
+    ADD V3, V3, #1                              // i++
+    CMP V3, #15                                 // loop as long as x <= 15
+    BLE outer_loop_copies_board2
+
+
+    POP {V1-V8, LR}
+    BX LR
+
+// -68 -64 -60    
+//  -4  X   4
+//  60  64  68
+// A1 <- X A2 <- Y
+counts_amount_of_active_neighbour:
+    PUSH {V1-V8, LR}
+    
+    MOV V1, A1                       // A1 <- X index
+    MOV V2, A2                       // A2 <- Y index
+                        
+    MOV V8, #0                       // Counts number of neighbour 
+    LSL V3, V1, #2                   //x << 2
+    LDR V4, =64
+    MUL V5, V4, V2                   //y*64
+    ADD V6, V5, V3                   // x+y offsets to get final address
+    LDR V1, =GoLBoard
+    ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
+
+    SUB V2, V1, #68                // X-1 Y-1
+    LDR V2, [V2] //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    
+    SUB V2, V1, #64                 // Y-1
+    LDR V2, [V2]                    //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    SUB V2, V1, #60                // X+1  Y-1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    SUB V2, V1, #4                  // X-1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+    ADD V2, V1, #4                  // X + 1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    ADD V2, V1, #60                 // X-1 Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+
+    ADD V2, V1, #64                 // Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+    ADD V2, V1, #68                 // X+1 Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    
+    MOV A1, V8                      // Returns into A1 the number of neighbours
+    
+    POP {V1-V8, LR}
+    BX LR
+
+// A1 <-X A2<- Y
+active_cell_with_less_than_1_active_neighbour:
+    PUSH {V1-V7,LR}
+    MOV V1, A1
+    MOV V2, A2
+    LSL V3, V1, #2                   //x << 2
+    LDR V4, =64
+    MUL V5, V4, V2                   //y*64
+    ADD V6, V5, V3                   // x+y offsets to get final address
+    LDR V1, =GoLBoard_Copy
+    ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
+    MOV V7, #0                       // Makes it inactive
+    STR V7, [V1]                     // Store 0 in     
+    POP {V1-V7,LR}
+    BX LR
+active_cell_with_2or3_active_neighbour:
+    PUSH {V1-V7, LR}
+    POP {V1-V7, LR}
+    BX LR
+
+active_cell_with_4_or_more_becomes_active_neighbour:
+    PUSH {V1-V7,LR}
+    MOV V1, A1
+    MOV V2, A2
+    LSL V3, V1, #2                   //x << 2
+    LDR V4, =64
+    MUL V5, V4, V2                   //y*64
+    ADD V6, V5, V3                   // x+y offsets to get final address
+    LDR V1, =GoLBoard_Copy
+    ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
+    MOV V7, #0                       // Makes it inactive
+    STR V7, [V1]                     // Store 0 in     
+    POP {V1-V7,LR}
+    BX LR
+
+inactive_cell_with_3_becomes_active_neighbour:
+    PUSH {V1-V7,LR}
+    MOV V1, A1
+    MOV V2, A2
+    LSL V3, V1, #2                   //x << 2
+    LDR V4, =64
+    MUL V5, V4, V2                   //y*64
+    ADD V6, V5, V3                   // x+y offsets to get final address
+    LDR V1, =GoLBoard_Copy
+    ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
+    MOV V7, #1                       // Makes it active
+    STR V7, [V1]                     // Store 0 in     
+    POP {V1-V7,LR}
+    BX LR
+
+update_board_copy_after_n_pressed:      //this one copies from the copy to the orginal
+    PUSH {V1-V8, LR}
+    LDR V1, =GoLBoard_Copy              // Get the address of the board 
+    LDR V2, =GoLBoard              // Get the address of the board 
+    MOV V3, #0                          // i -> X coord
+    MOV V4, #0                          // j -> Y coord
+    MOV V5, #0                          // X offset
+    MOV V6, #0                          // Y offset
+    MOV V8, #0
+    outer_loop_update_board_copy_after_n_pressed:
+        inner_loop_update_board_copy_after_n_pressed:
+            
+            LSL V5, V3, #2                      // X << 2
+            ADD V8, V8, V5                      // Add x and y offsets to get final address
+            LDR V7, =64                         // Load 16 for offset
+            MUL V6, V4, V7                      // New Y coord = Y * 64 
+            ADD V8, V8, V6                      // Add x and y offsets to get final address
+            
+            
+            LDR V7, [V2, V8]                    // Check what if 1 (active) or 0 (inactive) at given location
+            
+            
+            MOV A1, V3                           // X <- A1 - for subroutine call
+            MOV A2, V4                           // Y <- A2 - for subroutine call
+            BL counts_amount_of_active_neighbour // subroutine to count the number of neighbout
+
+            CMP V7, #0 
+            BNE check_active_cases
+
+            CMP A1, #3
+            MOVEQ A1, V3                           // X <- A1 - for subroutine call
+            MOVEQ A2, V4                           // Y <- A2 - for subroutine call
+            BLEQ inactive_cell_with_3_becomes_active_neighbour      
+            B end_cases
+            
+            check_active_cases: 
+                CMP A1, #1
+                MOVLE A1, V3                           // X <- A1 - for subroutine call
+                MOVLE A2, V4                           // Y <- A2 - for subroutine call
+                BLLE active_cell_with_less_than_1_active_neighbour
+                BLE end_cases
+
+                CMP A1, #4
+                MOVGE A1, V3                           // X <- A1 - for subroutine call
+                MOVGE A2, V4                           // Y <- A2 - for subroutine call
+                BLGE active_cell_with_4_or_more_becomes_active_neighbour
+                BGE end_cases
+
+                BLNE active_cell_with_2or3_active_neighbour
+
+            end_cases:
+
+            ADD V4, V4, #1                      // j ++
+            MOV V5, #0
+            MOV V6, #0
+            MOV V8, #0
+        
+        CMP V4, #11                             // Loop as long as x <= 15
+        BLE inner_loop_update_board_copy_after_n_pressed
+    MOV V4, #0                                  // j reset to 0
+    MOV V6, #0
+    ADD V3, V3, #1                              // i++
+    CMP V3, #15                                 // loop as long as x <= 15
+    BLE outer_loop_update_board_copy_after_n_pressed
+
+    POP {V1-V8, LR}
+    BX LR
+    
+update_board_after_n_pressed:
+    PUSH {V1-V8, LR}
+    BL update_board_copy_after_n_pressed
+    //BL copies_all_elements_of_board_in_board_copy
+    BL copies_all_elements_of_board_in_board_copy2
+    BL GoL_draw_board_ASM
+    
+    POP {V1-V8, LR}
+    BX LR
+
 _start:
     setup:
+        //BL copies_all_elements_of_board_in_board_copy2
         BL GoL_draw_grid_ASM
-        BL set_initial_cursor
+        BL GoL_draw_board_ASM
+        BL copies_all_elements_of_board_in_board_copy
+        
     
     game:
-        MOV A1, #15
-        MOV A2, #6        
+        //MOV A1, #15
+        //MOV A2, #6   
+        //MOV A1, #4
+        //MOV A2, #4
+        //BL counts_amount_of_active_neighbour 
 
-        BL GoL_draw_board_ASM
-    	B game
+        //BL update_board_copy_after_n_pressed
+        
+        
+        //BL GoL_draw_board_ASM
+
+        BL set_cursor
+        BL curser_polling
+        B game
+
+
+inf: 
+    B inf

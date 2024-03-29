@@ -458,15 +458,31 @@ handle_initial_drawing:
     CMP V4, #0
     MOVEQ V7, #0
     STR V7, [V8]
-	BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
-	POP {LR}
-    
-
-	ADD V2, V2, #1 //x+1
-	ADD V1, V1, #4 //increment address to go to the next x value
-	CMP V2, #16
-	BGE reset_x //if x is 16 then we need to reset it to 0 (reached the last column), and increase y
 	
+  
+    LDR V8, CURRENT_CURSOR_X
+    LDR V4, CURRENT_CURSOR_Y
+
+    CMP V2, V8                  // check if X = X_cursor
+    BNE skip                    // skipp if not equal
+
+    CMP V3, V4                  // chekc if Y = Y_cursor 
+    BNE skip                    // if not equal skip
+    
+    B dont_call_fill    
+
+    skip:
+        BL GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
+	    
+        
+    dont_call_fill:
+        POP {LR}
+	    ADD V2, V2, #1 //x+1
+	    ADD V1, V1, #4 //increment address to go to the next x value
+	    CMP V2, #16
+	    BGE reset_x //if x is 16 then we need to reset it to 0 (reached the last column), and increase y
+	
+
 	B handle_initial_drawing
 	
 	
