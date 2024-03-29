@@ -889,7 +889,7 @@ update_board_after_n_pressed:
     BL update_board_copy_after_n_pressed
     //BL copies_all_elements_of_board_in_board_copy
     BL copies_all_elements_of_board_in_board_copy2
-    
+    BL GoL_draw_board_ASM
     
     POP {V1-V8, LR}
     BX LR
@@ -900,6 +900,7 @@ _start:
         BL GoL_draw_grid_ASM
         BL GoL_draw_board_ASM
         BL copies_all_elements_of_board_in_board_copy
+        
     
     game:
         //MOV A1, #15
@@ -909,9 +910,11 @@ _start:
         //BL counts_amount_of_active_neighbour 
 
         //BL update_board_copy_after_n_pressed
-        BL GoL_draw_board_ASM
         
-        //BL set_cursor
+        
+        //BL GoL_draw_board_ASM
+
+        BL set_cursor
         BL curser_polling
         B game
 
