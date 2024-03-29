@@ -369,8 +369,8 @@ handle_initial_drawing:
     PUSH {LR}
 	LDR V4, [V1] //load golboard[x][y] into V4
 	CMP V4, #1 //check if its equal to 1
-	MOV A1, V2
-	MOV A2, V3 //move x and y values into A1 and A2 (inputs for the function if we call it)
+	LDR A1, [V2]
+	LDR A2, [V3] //load x and y values into A1 and A2 (inputs for the function if we call it)
 	BLEQ GoL_fill_gridxy_ASM //branch and link if equal to 1, draw the block
 	POP {LR}
     
@@ -386,7 +386,7 @@ handle_initial_drawing:
 reset_x:
 	MOV V2, #0 //reset x to 0
 	ADD V3, #1 //increase y by 1 because we are on a new row
-	ADD V5, V5, #64 //set V5 to the beginning of the next row
+	ADD V5, V5, #16 //set V5 to the beginning of the next row
 	MOV V1, V5 //set V1 to base address of the current row (so we can go through the x addresses)
 	CMP V3, #12 //if y is 12 we are done
 	BGE final_exit
