@@ -36,18 +36,18 @@ padding1: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 //starting game board (from lab doc)
 GoLBoard:
 	//  x 0 1 2 3 4 5 6 7 8 9 a b c d e f    y
-	.word 0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0 // 0
-	.word 0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0 // 1
-	.word 0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0 // 2
-	.word 0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0 // 3
-	.word 0,0,0,0,1,1,0,1,0,1,1,0,0,0,0,0 // 4
-	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 5
-	.word 0,0,0,0,1,1,0,1,0,1,1,0,0,0,0,0 // 6
-	.word 0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0 // 7
-	.word 0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0 // 8
-	.word 0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0 // 9
-	.word 1,1,1,1,0,0,1,0,1,0,0,0,0,0,0,0 // a
-	.word 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 // b
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 0
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 1
+	.word 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0 // 2
+	.word 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0 // 3
+	.word 0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0 // 4
+	.word 0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0 // 5
+	.word 0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0 // 6
+	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 7
+	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 8
+	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 9
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
+	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
 
 padding2: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
 
@@ -186,7 +186,6 @@ VGA_clear_pixelbuff_ASM:
 
 // void Set_VGA_BackGroundColour_pixelbuff_ASM(Colour C);
 // clears (sets to c_ all the valid memory locations in the pixel buffer. It takes no arguments and returns nothing.
-// TODO: Do we want a constant for colour of an input?
 Set_VGA_BackGroundColour_pixelbuff_ASM:
 
     PUSH {V1-V7, LR}
@@ -253,7 +252,7 @@ VGA_draw_line_ASM_vertical:
 VGA_draw_line_ASM:
     PUSH {LR}
 
-    // INPUT Validation                     //TODO: might want to implement this differently
+    // INPUT Validation                     
     CMP A1, A2                              // Check for X1 > X2
     BGT end_draw_line
 
@@ -283,7 +282,6 @@ VGA_draw_line_ASM:
         POP {LR}
         BX LR
 
-    // TODO: THERE'S a BUG WITH THIS ONE it won't draw past the second line
     VGA_draw_ASM_Horizontal_Grid:
     
         PUSH {V1-V4, LR}
@@ -303,12 +301,9 @@ VGA_draw_line_ASM:
             CMP A3, V1 
             BLE loop_Horizontal_Grid
 
-        // TODO: Find out why i need to do in order to write the last line 
+      
         MOV A1, #0 
-        //LDR A2, =MAXIMUM_X_INDEX_PIXEL_REGISTER
-        //MOV A3, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
-		//MOV A4, A3                  // A2 <- A1
-        //BL VGA_draw_line_ASM
+       
         POP {V1-V4, LR}
         BX LR
     
@@ -328,10 +323,6 @@ VGA_draw_line_ASM:
             CMP A1, V1 
             BLE loop_Vertical_Grid
 
-        // TODO: Find out why i need to do in order to write the last line 
-        //MOV A1, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
-		//MOV A2, A1                  // A2 <- A1
-        //BL VGA_draw_line_ASM
         POP {V1, LR}
         BX LR
 
@@ -354,7 +345,7 @@ VGA_draw_rect_ASM:
 
     PUSH {V1-V7, LR}
 
-    // INPUT Validation                     //TODO: might want to implement this differently
+    // INPUT Validation                     
     CMP A1, A2                              // Check for X1 > X2
     BGT end_draw_rec
 
@@ -525,7 +516,7 @@ set_cursor:
     LDR V8, =COLOR_SELECTOR
 
     // MOV V7, #2 //set color to 2 which is white
-    LDR V7, CURRENT_CURSOR_COLOUR  //TODO: fix this to handle grey as well
+    LDR V7, CURRENT_CURSOR_COLOUR  
     STR V7, [V8]
 	BL GoL_fill_gridxy_ASM
     POP {V1-V8, LR}
@@ -667,7 +658,6 @@ get_colour:
     POP {V1-V7, LR}
     BX LR
 
-// DONT FIXME:
 end_curser_polling:
     POP {V1-V8, LR}
     BX LR
@@ -920,8 +910,8 @@ update_board_copy_after_n_pressed:      //this one copies from the copy to the o
     
 update_board_after_n_pressed:
     PUSH {V1-V8, LR}
+
     BL update_board_copy_after_n_pressed
-    //BL copies_all_elements_of_board_in_board_copy
     BL copies_all_elements_of_board_in_board_copy2
     BL GoL_draw_board_ASM
     
@@ -930,28 +920,15 @@ update_board_after_n_pressed:
 
 _start:
     setup:
-        //BL copies_all_elements_of_board_in_board_copy2
+        
         BL GoL_draw_grid_ASM
         BL GoL_draw_board_ASM
         BL copies_all_elements_of_board_in_board_copy
         
     
     game:
-        //MOV A1, #15
-        //MOV A2, #6   
-        //MOV A1, #4
-        //MOV A2, #4
-        //BL counts_amount_of_active_neighbour 
-
-        //BL update_board_copy_after_n_pressed
-        
-        
-        //BL GoL_draw_board_ASM
-
+     
         BL set_cursor
         BL curser_polling
         B game
 
-
-inf: 
-    B inf
