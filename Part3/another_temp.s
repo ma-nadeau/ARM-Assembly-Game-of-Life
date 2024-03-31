@@ -94,12 +94,24 @@ read_PS2_data_ASM:
 	AND V2, V2, #0xFF //if its 1, we get only the low eight bits
 	STRB V2, [A1] //store this byte in the memory location put as input
     MOV A2, #1
+    BL clear_keyboard
 	B exit_read_ps2_data
 dont_read:
 	MOV A2, #0 //if we dont read, return 0
 exit_read_ps2_data:
 	POP {V1-V5, LR}
 	BX LR
+
+clear_keyboard:
+    PUSH {V1-V5}
+    LDR V1, =PS2_Data_Address         
+clearing_loop:
+    LDR V2, [V1] //V2 has ps2 data register content              
+    LSR V3, V2, #16 //get ravail (nb of data items remaining in FIFO)         
+    CMP V3, #0 //if its not 0 (therre are still things in the queue), we continue looping                
+    BNE clearing_loop  //each loop ravail goes down by 1           
+    POP {V1-V5}
+    BX LR                      //once its zero we can leave
 	
 
 
