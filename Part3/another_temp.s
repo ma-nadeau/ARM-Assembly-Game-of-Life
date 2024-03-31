@@ -46,8 +46,8 @@ GoLBoard:
 	.word 0,0,0,1,0,1,0,0,0,1,0,1,0,0,0,0 // 7
 	.word 0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0 // 8
 	.word 0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0 // 9
-	.word 0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0 // a
-	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
+	.word 1,1,1,1,0,0,1,0,1,0,0,0,0,0,0,0 // a
+	.word 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 // b
 
 padding2: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
 
@@ -628,7 +628,7 @@ handle_space:
     MOVEQ V2, #1
     STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
     
-    
+    BL copies_all_elements_of_board_in_board_copy
     POP {V1-V8, LR}
     BX LR
     
