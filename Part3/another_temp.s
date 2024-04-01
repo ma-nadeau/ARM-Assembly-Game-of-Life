@@ -742,7 +742,10 @@ counts_amount_of_active_neighbour:
     LDR V1, =GoLBoard
     ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
     CMP A1, #0 
+    
     BEQ skip_LHS
+
+     // ---    Check LHS   --- \\
 
     SUB V2, V1, #68                // X-1 Y-1
     LDR V2, [V2] //check if its 1 or 0
@@ -754,15 +757,16 @@ counts_amount_of_active_neighbour:
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
-     SUB V2, V1, #60                // X+1  Y-1
+    ADD V2, V1, #60                 // X-1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
     
     
     
     skip_LHS:
-    
+    // ---     Check directly above and under the (X,Y) 
     SUB V2, V1, #64                 // Y-1
     LDR V2, [V2]                    //check if its 1 or 0
     CMP V2, #1
@@ -774,20 +778,20 @@ counts_amount_of_active_neighbour:
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
     CMP A1, #15
+    
     BEQ skip_RHS
 
-
+    // ---    Check RHS   --- \\
+    SUB V2, V1, #60                // X+1  Y-1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
     ADD V2, V1, #4                  // X + 1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    ADD V2, V1, #60                 // X-1 Y+1
-    LDR V2, [V2]                   //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-
 
     ADD V2, V1, #68                 // X+1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
