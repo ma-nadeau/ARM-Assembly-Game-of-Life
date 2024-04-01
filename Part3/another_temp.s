@@ -741,20 +741,11 @@ counts_amount_of_active_neighbour:
     ADD V6, V5, V3                   // x+y offsets to get final address
     LDR V1, =GoLBoard
     ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
+    CMP A1, #0 
+    BEQ skip_LHS
 
     SUB V2, V1, #68                // X-1 Y-1
     LDR V2, [V2] //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-    
-    
-    SUB V2, V1, #64                 // Y-1
-    LDR V2, [V2]                    //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-    
-    SUB V2, V1, #60                // X+1  Y-1
-    LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
@@ -762,6 +753,30 @@ counts_amount_of_active_neighbour:
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+     SUB V2, V1, #60                // X+1  Y-1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    
+    
+    skip_LHS:
+    
+    SUB V2, V1, #64                 // Y-1
+    LDR V2, [V2]                    //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+    ADD V2, V1, #64                 // Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+    CMP A1, #15
+    BEQ skip_RHS
+
+
 
     ADD V2, V1, #4                  // X + 1
     LDR V2, [V2]                   //check if its 1 or 0
@@ -774,17 +789,13 @@ counts_amount_of_active_neighbour:
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
 
-    ADD V2, V1, #64                 // Y+1
-    LDR V2, [V2]                   //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-
     ADD V2, V1, #68                 // X+1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    
+    skip_RHS: 
+
     MOV A1, V8                      // Returns into A1 the number of neighbours
     
     POP {V1-V8, LR}
