@@ -32,7 +32,7 @@ grey_cursor = -2139062144
 MAXIMUM_X_INDEX_PIXEL_REGISTER = 319
 MAXIMUM_Y_INDEX_PIXEL_REGISTER = 239
 
-padding1: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
+padding1: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0    // Enforce 0's above and under the map so as to avoid conflicts
 //starting game board (from lab doc)
 GoLBoard:
 	//  x 0 1 2 3 4 5 6 7 8 9 a b c d e f    y
@@ -741,21 +741,30 @@ counts_amount_of_active_neighbour:
     ADD V6, V5, V3                   // x+y offsets to get final address
     LDR V1, =GoLBoard
     ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
-    CMP A1, #0 
     
+    CMP A1, #0                       // If X == 0, don't check LHS
     BEQ skip_LHS
 
      // ---    Check LHS   --- \\
+    CMP A2, #0                      // If Y == 0, don't check LHS UP
+    BEQ skip_LHS_UP
+
 
     SUB V2, V1, #68                // X-1 Y-1
     LDR V2, [V2] //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
+    skip_LHS_UP: 
+
+
     SUB V2, V1, #4                  // X-1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+    CMP A2, #11                      // If Y == 11, don't check DOWN
+    BEQ skip_LHS_DOWN
 
     ADD V2, V1, #60                 // X-1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
@@ -764,34 +773,48 @@ counts_amount_of_active_neighbour:
 
     
     
-    
     skip_LHS:
     // ---     Check directly above and under the (X,Y) 
-    SUB V2, V1, #64                 // Y-1
+    ADD V2, V1, #64                 // Y-1
     LDR V2, [V2]                    //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+   
+    CMP A2, #0                      // If Y == 0, don't check LHS UP
+    BEQ skip_UP
 
-    ADD V2, V1, #64                 // Y+1
+    skip_LHS_DOWN:
+
+    
+
+    SUB V2, V1, #64                 // Y+1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
+    skip_UP:
+
     CMP A1, #15
-    
     BEQ skip_RHS
+
+    CMP A2, #0                      // If Y == 0, don't check LHS UP
+    BEQ skip_RHS_UP
 
     // ---    Check RHS   --- \\
     SUB V2, V1, #60                // X+1  Y-1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+    
+    skip_RHS_UP:
 
     ADD V2, V1, #4                  // X + 1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
+    CMP A2, #11                      // If Y == 11, don't check DOWN
+    BEQ skip_RHS
 
     ADD V2, V1, #68                 // X+1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
