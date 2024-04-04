@@ -32,7 +32,6 @@ grey_cursor = -2139062144
 MAXIMUM_X_INDEX_PIXEL_REGISTER = 319
 MAXIMUM_Y_INDEX_PIXEL_REGISTER = 239
 
-padding1: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0    // Enforce 0's above and under the map so as to avoid conflicts
 //starting game board (from lab doc)
 GoLBoard:
 	//  x 0 1 2 3 4 5 6 7 8 9 a b c d e f    y
@@ -48,9 +47,6 @@ GoLBoard:
 	.word 0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0 // 9
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
-
-padding2: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
-
 GoLBoard_Copy:
 	//  x 0 1 2 3 4 5 6 7 8 9 a b c d e f    y
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 0
@@ -65,8 +61,6 @@ GoLBoard_Copy:
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // 9
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // a
 	.word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 // b
-
-padding3: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
 
 COLOR_SELECTOR: .word 1
 KEYBOARD_VALUE: .word 0
@@ -94,24 +88,12 @@ read_PS2_data_ASM:
 	AND V2, V2, #0xFF //if its 1, we get only the low eight bits
 	STRB V2, [A1] //store this byte in the memory location put as input
     MOV A2, #1
-    BL clear_keyboard
 	B exit_read_ps2_data
 dont_read:
 	MOV A2, #0 //if we dont read, return 0
 exit_read_ps2_data:
 	POP {V1-V5, LR}
 	BX LR
-
-clear_keyboard:
-    PUSH {V1-V5}
-    LDR V1, =PS2_Data_Address         
-clearing_loop:
-    LDR V2, [V1] //V2 has ps2 data register content              
-    LSR V3, V2, #16 //get ravail (nb of data items remaining in FIFO)         
-    CMP V3, #0 //if its not 0 (therre are still things in the queue), we continue looping                
-    BNE clearing_loop  //each loop ravail goes down by 1           
-    POP {V1-V5}
-    BX LR                      //once its zero we can leave
 	
 
 
@@ -186,6 +168,7 @@ VGA_clear_pixelbuff_ASM:
 
 // void Set_VGA_BackGroundColour_pixelbuff_ASM(Colour C);
 // clears (sets to c_ all the valid memory locations in the pixel buffer. It takes no arguments and returns nothing.
+// TODO: Do we want a constant for colour of an input?
 Set_VGA_BackGroundColour_pixelbuff_ASM:
 
     PUSH {V1-V7, LR}
@@ -252,7 +235,7 @@ VGA_draw_line_ASM_vertical:
 VGA_draw_line_ASM:
     PUSH {LR}
 
-    // INPUT Validation                     
+    // INPUT Validation                     //TODO: might want to implement this differently
     CMP A1, A2                              // Check for X1 > X2
     BGT end_draw_line
 
@@ -282,6 +265,7 @@ VGA_draw_line_ASM:
         POP {LR}
         BX LR
 
+    // TODO: THERE'S a BUG WITH THIS ONE it won't draw past the second line
     VGA_draw_ASM_Horizontal_Grid:
     
         PUSH {V1-V4, LR}
@@ -301,9 +285,12 @@ VGA_draw_line_ASM:
             CMP A3, V1 
             BLE loop_Horizontal_Grid
 
-      
+        // TODO: Find out why i need to do in order to write the last line 
         MOV A1, #0 
-       
+        //LDR A2, =MAXIMUM_X_INDEX_PIXEL_REGISTER
+        //MOV A3, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
+		//MOV A4, A3                  // A2 <- A1
+        //BL VGA_draw_line_ASM
         POP {V1-V4, LR}
         BX LR
     
@@ -323,6 +310,10 @@ VGA_draw_line_ASM:
             CMP A1, V1 
             BLE loop_Vertical_Grid
 
+        // TODO: Find out why i need to do in order to write the last line 
+        //MOV A1, V1                  // A1 <- =MAXIMUM_X_INDEX_PIXEL_REGISTER
+		//MOV A2, A1                  // A2 <- A1
+        //BL VGA_draw_line_ASM
         POP {V1, LR}
         BX LR
 
@@ -345,7 +336,7 @@ VGA_draw_rect_ASM:
 
     PUSH {V1-V7, LR}
 
-    // INPUT Validation                     
+    // INPUT Validation                     //TODO: might want to implement this differently
     CMP A1, A2                              // Check for X1 > X2
     BGT end_draw_rec
 
@@ -516,7 +507,7 @@ set_cursor:
     LDR V8, =COLOR_SELECTOR
 
     // MOV V7, #2 //set color to 2 which is white
-    LDR V7, CURRENT_CURSOR_COLOUR  
+    LDR V7, CURRENT_CURSOR_COLOUR  //TODO: fix this to handle grey as well
     STR V7, [V8]
 	BL GoL_fill_gridxy_ASM
     POP {V1-V8, LR}
@@ -631,7 +622,7 @@ handle_space:
     MOVEQ V2, #1
     STREQ V2, [V6]                        //if its green, we set it to 0 to make itpink
     
-    BL copies_all_elements_of_board_in_board_copy
+    
     POP {V1-V8, LR}
     BX LR
     
@@ -658,6 +649,7 @@ get_colour:
     POP {V1-V7, LR}
     BX LR
 
+// DONT FIXME:
 end_curser_polling:
     POP {V1-V8, LR}
     BX LR
@@ -741,88 +733,50 @@ counts_amount_of_active_neighbour:
     ADD V6, V5, V3                   // x+y offsets to get final address
     LDR V1, =GoLBoard
     ADD V1, V1, V6                   //this is the address of the entered X,Y cordinates
-    
-    CMP A1, #0                       // If X == 0, don't check LHS
-    BEQ skip_LHS
-
-     // ---    Check LHS   --- \\
-    CMP A2, #0                      // If Y == 0, don't check LHS UP
-    BEQ skip_LHS_UP
-
 
     SUB V2, V1, #68                // X-1 Y-1
     LDR V2, [V2] //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    skip_LHS_UP: 
-
-
-    SUB V2, V1, #4                  // X-1
-    LDR V2, [V2]                   //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-
-    CMP A2, #11                      // If Y == 11, don't check DOWN
-    BEQ skip_LHS_DOWN
-
-    ADD V2, V1, #60                 // X-1 Y+1
-    LDR V2, [V2]                   //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-
     
-    
-    skip_LHS:
-    // ---     Check directly above and under the (X,Y) 
-    ADD V2, V1, #64                 // Y-1
+    SUB V2, V1, #64                 // Y-1
     LDR V2, [V2]                    //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-   
-    CMP A2, #0                      // If Y == 0, don't check LHS UP
-    BEQ skip_UP
-
-    skip_LHS_DOWN:
-
     
-
-    SUB V2, V1, #64                 // Y+1
-    LDR V2, [V2]                   //check if its 1 or 0
-    CMP V2, #1
-    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-
-    skip_UP:
-
-    CMP A1, #15
-    BEQ skip_RHS
-
-    CMP A2, #0                      // If Y == 0, don't check LHS UP
-    BEQ skip_RHS_UP
-
-    // ---    Check RHS   --- \\
     SUB V2, V1, #60                // X+1  Y-1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    skip_RHS_UP:
+    SUB V2, V1, #4                  // X-1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
     ADD V2, V1, #4                  // X + 1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    CMP A2, #11                      // If Y == 11, don't check DOWN
-    BEQ skip_RHS
+    ADD V2, V1, #60                 // X-1 Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
+
+
+    ADD V2, V1, #64                 // Y+1
+    LDR V2, [V2]                   //check if its 1 or 0
+    CMP V2, #1
+    ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
 
     ADD V2, V1, #68                 // X+1 Y+1
     LDR V2, [V2]                   //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
     
-    skip_RHS: 
-
+    
     MOV A1, V8                      // Returns into A1 the number of neighbours
     
     POP {V1-V8, LR}
@@ -948,8 +902,8 @@ update_board_copy_after_n_pressed:      //this one copies from the copy to the o
     
 update_board_after_n_pressed:
     PUSH {V1-V8, LR}
-
     BL update_board_copy_after_n_pressed
+    //BL copies_all_elements_of_board_in_board_copy
     BL copies_all_elements_of_board_in_board_copy2
     BL GoL_draw_board_ASM
     
@@ -958,15 +912,28 @@ update_board_after_n_pressed:
 
 _start:
     setup:
-        
+        //BL copies_all_elements_of_board_in_board_copy2
         BL GoL_draw_grid_ASM
         BL GoL_draw_board_ASM
         BL copies_all_elements_of_board_in_board_copy
         
     
     game:
-     
+        //MOV A1, #15
+        //MOV A2, #6   
+        //MOV A1, #4
+        //MOV A2, #4
+        //BL counts_amount_of_active_neighbour 
+
+        //BL update_board_copy_after_n_pressed
+        
+        
+        //BL GoL_draw_board_ASM
+
         BL set_cursor
         BL curser_polling
         B game
 
+
+inf: 
+    B inf
