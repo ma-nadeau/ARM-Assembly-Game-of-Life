@@ -1,5 +1,5 @@
-// Authors: Marc-Antoine Nadeau - 261114549
-//          Rehean Thillainathalingam - 261116121
+// Authors: Marc-Antoine Nadeau
+//          Rehean Thillainathalingam
 
 
 // contains the color value of every pixel on the screen 

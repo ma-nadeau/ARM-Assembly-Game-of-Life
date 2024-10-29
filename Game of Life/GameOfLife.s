@@ -1,5 +1,5 @@
-// Authors: Marc-Antoine Nadeau - 261114549
-//          Rehean Thillainathalingam - 261116121
+// Authors: Marc-Antoine Nadeau
+//          Rehean Thillainathalingam
 
 
 
@@ -79,7 +79,7 @@ CURRENT_CURSOR_COLOUR: .word 2
 //
 // PS2 DRIVER
 //
-@ TODO: insert PS/2 driver here.
+
 //assuming A1 is the address where we ant to store the keyboard value (input)
 //assuming A2 is the return (1 or 0)
 read_PS2_data_ASM:
@@ -301,9 +301,8 @@ VGA_draw_line_ASM:
             CMP A3, V1 
             BLE loop_Horizontal_Grid
 
-      
         MOV A1, #0 
-       
+
         POP {V1-V4, LR}
         BX LR
     
@@ -635,7 +634,7 @@ handle_space:
     POP {V1-V8, LR}
     BX LR
     
- handle_n: //TODO update board
+handle_n:
     PUSH {LR}
     BL update_board_after_n_pressed
     POP {LR}
@@ -780,7 +779,7 @@ counts_amount_of_active_neighbour:
     LDR V2, [V2]                    //check if its 1 or 0
     CMP V2, #1
     ADDEQ V8, V8, #1                //if it equal we add 1 to the nb of neighbors
-   
+
     CMP A2, #0                      // If Y == 0, don't check LHS UP
     BEQ skip_UP
 
